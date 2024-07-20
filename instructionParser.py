@@ -1,10 +1,10 @@
 import re
 
-class instructionParser:
+class InstructionParser:
     def __init__(self,src:str):
         # opens the input file
         self._inputFile = open (src,'r')
-        self.currentInstruction = ""
+        self._currentInstruction = ""
 
     # read next line
     # this method should be called only if hasMoreLines() is true
@@ -38,14 +38,15 @@ class instructionParser:
             if match[1] == "if-goto":
                 return "C_IF"
             return "C_" + match[1].upper()
+        return "C_ARITHMETIC"
 
     # Returns the first argument of the current command        
     def arg1(self)->str:
-        return self.currentInstruction.split()[1]
+        return self._currentInstruction if self.commandType() == "C_ARITHMETIC" else self._currentInstruction.split()[1]
     
     # Returns the second argument of the current command        
     def arg2(self)->int:
-        return int(self.currentInstruction.split()[2])
+        return int(self._currentInstruction.split()[2])
 
 
     

@@ -12,7 +12,7 @@ class CodeWriter:
 
     # Writes to the output file the assembly code, that implements the given arithmetic command
     def writeArithmetic(self,command):
-        code = " ".join("//",command)
+        code = " ".join(["//",command])+"\n"
         match command:
             case "add" | "sub":
                code+="\n".join(
@@ -70,13 +70,13 @@ class CodeWriter:
                         "(" + upperCommand + "_END)",
                     ]
                 )
-        code+="\n".join(
+        code+="\n"+"\n".join(
             [
                 "@SP", 
                 "M=M+1"
             ]
         )
-        self._outFile.write(code)
+        self._outFile.write(code+"\n")
 
     # Writes to the output file the assembly code, that implements the given push or pop command
     # command -> C_PUSH or C_POP
@@ -87,10 +87,10 @@ class CodeWriter:
         match command:
             case "C_PUSH":
                 # push implementation
-                code+=" ".join(["//","push",segment,index])
+                code+=" ".join(["//","push",segment,str(index)])+"\n"
 
                 # if segment == "local" | "argument" | "this" | "that"
-                if ["local","this","argument","that"] in segment:
+                if  segment in ["local","this","argument","that"]:
                     code+=self._pushLatt(segment,index)
 
                 # if segment == "constant"
@@ -107,10 +107,10 @@ class CodeWriter:
                 return
             case "C_POP":
                 # pop implementation
-                code+=" ".join(["//","pop",segment,index])
+                code+=" ".join(["//","pop",segment,str(index)])+"\n"
 
                 # if segment == "local" | "argument" | "this" | "that"
-                if ["local","this","argument","that"] in segment:
+                if  segment in ["local","this","argument","that"]:
                     code+=self._popLatt(segment,index)
 
                 # if segment == "static"
@@ -123,14 +123,13 @@ class CodeWriter:
                 # if segment == "pointer"
                 else:
                     code+=self._popPointer(index)
-                return
-        self._outFile.write(code)
+        self._outFile.write(code+"\n")
     # Push local | argument | this | that i
     # addr = segmentPointer+index, *SP=*addr, SP++
     def _pushLatt(self,segment,index):
         return "\n".join(
                     [
-                       "@"+index,
+                       "@"+str(index),
                        "D=A",
                        "@"+self._segmentMap[segment],
                        "A=M+D",
@@ -148,7 +147,7 @@ class CodeWriter:
     def _popLatt(self,segment,index):
         return "\n".join(
                     [
-                        "@"+index,
+                        "@"+str(index),
                         "D=A",
                         "@"+self._segmentMap[segment],
                         "M=M+D",
@@ -166,7 +165,7 @@ class CodeWriter:
     def _pushConstant(self,index):
         return "\n".join(
             [
-                "@"+index,
+                "@"+str(index),
                 "D=A",
                 "@SP",
                 "A=M",
@@ -185,7 +184,7 @@ class CodeWriter:
                 "@SP",
                 "A=M",
                 "D=M",
-                "@"+self._outName.replace(".asm","."+index),
+                "@"+self._outName.replace(".asm","."+str(index)),
                 "M=D"
             ]
         )
@@ -194,7 +193,7 @@ class CodeWriter:
     def _pushTemp(self,index):
         return "\n".join(
             [
-                "@"+index+5,
+                "@"+str(index+5),
                 "A=M",
                 "D=M",
                 "@SP",
@@ -212,7 +211,7 @@ class CodeWriter:
                 "@SP",
                 "AM=M-1",
                 "D=M",
-                "@"+index+5,
+                "@"+str(index+5),
                 "A=M",
                 "M=D"
             ]
@@ -224,7 +223,6 @@ class CodeWriter:
         segment="THIS" if index == 0 else "THAT"
         return "\n".join(
             [
-                " ".join("//","push","pointer",index),
                 "@"+segment,
                 "D=A",
                 "@SP",
@@ -241,7 +239,6 @@ class CodeWriter:
         segment="THIS" if index == 0 else "THAT"
         return "\n".join(
             [
-                " ".join("//","pop","pointer",index),
                 "@SP",
                 "AM=M-1",
                 "D=M",
