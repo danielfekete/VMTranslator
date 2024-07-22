@@ -1,7 +1,8 @@
 class CodeWriter:
     def __init__(self,outName:str):
         # Opens the output file
-        self._outName=outName
+        self._outBaseName=outName.split("/")[-1]
+        self._arithmeticCount=1
         self._outFile=open(outName,"a")
         self._segmentMap={
             "local":"LCL",
@@ -12,36 +13,36 @@ class CodeWriter:
 
     # Writes to the output file the assembly code, that implements the given arithmetic command
     def writeArithmetic(self,command):
-        code = " ".join(["//",command])+"\n"
+        code = self._writeLines([" ".join(["//",command])])
         match command:
             case "add" | "sub":
-               code+="\n".join(
+               code+=self._writeLines(
                     [
                         "@SP",
                         "AM=M-1", 
                         "D=M", 
                         "@SP", 
                         "AM=M-1",
-                        "M=D"+"+D" if command=="add" else "-D",     
+                        "M=M"+("+D" if command=="add" else "-D"),     
                     ]
                 )
             case "neg" | "not":
-                code+="\n".join(
+                code+=self._writeLines(
                     [
                         "@SP",
                         "AM=M-1",
-                        "M="+ "-M" if command == "neg" else "not" ,
+                        "M="+ ("-M" if command == "neg" else "!M") ,
                     ]
                 )
             case "and" | "or":
-                code+="\n".join(
+                code+=self._writeLines(
                     [
                         "@SP",
                         "AM=M-1",
                         "D=M",
                         "@SP",
                         "AM=M-1",
-                        "M=M"+"&" if command == "and" else "|"+"D", 
+                        "M=M"+("&" if command == "and" else "|")+"D", 
                     ]
                 )
             case "eq" | "gt" | "lt":
@@ -51,32 +52,41 @@ class CodeWriter:
                 elif command == "lt":
                     jump = "JLT"
                 upperCommand=command.upper()
-                code+="\n".join(
+                code+=self._writeLines(
                     [
                         "@SP",
+                        "AM=M-1", 
+                        "D=M", 
+                        "@SP",
                         "AM=M-1",
-                        "D=D-M",
-                        "@" + upperCommand + "_TRUE",
+                        "D=M-D",
+                        "@" + upperCommand + "_TRUE_"+str(self._arithmeticCount),
                         "D;" + jump,
                         "@SP",
                         "A=M",
                         "M=0",
-                        "@" + upperCommand + "_END",
+                        "@" + upperCommand + "_END_"+str(self._arithmeticCount),
                         "0;JMP",
-                        "(" + upperCommand + "_TRUE)"
+                    ])+self._writeLines(
+                    [
+                        "(" + upperCommand + "_TRUE_"+str(self._arithmeticCount)+")"
+                    ]
+                        ,0)+self._writeLines([
                         "@SP",
                         "A=M",
-                        "M=-1",
-                        "(" + upperCommand + "_END)",
-                    ]
-                )
-        code+="\n"+"\n".join(
+                        "M=-1"
+                    ])+self._writeLines([
+                        "(" + upperCommand + "_END_"+str(self._arithmeticCount)+")"
+                    ],0)
+                self._arithmeticCount+=1
+                
+        code+=self._writeLines(
             [
                 "@SP", 
                 "M=M+1"
             ]
         )
-        self._outFile.write(code+"\n")
+        self._outFile.write(code)
 
     # Writes to the output file the assembly code, that implements the given push or pop command
     # command -> C_PUSH or C_POP
@@ -84,10 +94,12 @@ class CodeWriter:
     # index
     def writePushPop(self,command,segment,index):
         code=""
+        
         match command:
             case "C_PUSH":
+                
                 # push implementation
-                code+=" ".join(["//","push",segment,str(index)])+"\n"
+                code+=self._writeLines([" ".join(["//","push",segment,str(index)])])
 
                 # if segment == "local" | "argument" | "this" | "that"
                 if  segment in ["local","this","argument","that"]:
@@ -101,13 +113,17 @@ class CodeWriter:
                 elif segment == "temp":
                     code+=self._pushTemp(index)
 
+                # if segment == "static"
+                elif segment == "static":
+                    code+=self._pushStatic(index)
+
                 # if segment == "pointer"
                 else:
                     code+=self._pushPointer(index)
-                return
             case "C_POP":
+                
                 # pop implementation
-                code+=" ".join(["//","pop",segment,str(index)])+"\n"
+                code+=self._writeLines([" ".join(["//","pop",segment,str(index)])])
 
                 # if segment == "local" | "argument" | "this" | "that"
                 if  segment in ["local","this","argument","that"]:
@@ -118,16 +134,17 @@ class CodeWriter:
                     code+=self._popStatic(index)
 
                 # if segment == "temp"
-                if segment == "temp":
+                elif segment == "temp":
                     code+=self._popTemp(index)
                 # if segment == "pointer"
                 else:
                     code+=self._popPointer(index)
-        self._outFile.write(code+"\n")
+        self._outFile.write(code)
     # Push local | argument | this | that i
     # addr = segmentPointer+index, *SP=*addr, SP++
     def _pushLatt(self,segment,index):
-        return "\n".join(
+        
+        return self._writeLines(
                     [
                        "@"+str(index),
                        "D=A",
@@ -145,16 +162,18 @@ class CodeWriter:
     # Pop local | argument | this | that i
     # addr = segmentPointer+index,  SP--, *addr=*SP
     def _popLatt(self,segment,index):
-        return "\n".join(
+        return self._writeLines(
                     [
                         "@"+str(index),
                         "D=A",
                         "@"+self._segmentMap[segment],
-                        "M=M+D",
+                        "D=M+D",
+                        "@addr",
+                        "M=D",
                         "@SP",
                         "AM=M-1",
                         "D=M",
-                        "@"+self._segmentMap[segment],
+                        "@addr",
                         "A=M",
                         "M=D"
                     ]
@@ -163,7 +182,7 @@ class CodeWriter:
     # push constant i
     # *SP=i, SP++
     def _pushConstant(self,index):
-        return "\n".join(
+        return self._writeLines(
             [
                 "@"+str(index),
                 "D=A",
@@ -176,25 +195,26 @@ class CodeWriter:
         )
     
     # pop static i
-    # xxx.i = *SP
+    # SP--, xxx.i = *SP
 
     def _popStatic(self,index):
-        return "\n".join(
+        return self._writeLines(
             [
                 "@SP",
-                "A=M",
+                "AM=M-1",
                 "D=M",
-                "@"+self._outName.replace(".asm","."+str(index)),
+                "@"+self._outBaseName.replace(".asm","."+str(index)),
                 "M=D"
             ]
         )
     
-    # addr = 5+index, *SP=*addr, SP++
-    def _pushTemp(self,index):
-        return "\n".join(
+    # push static i
+    # SP*=xxx.i, SP++
+
+    def _pushStatic(self,index):
+        return self._writeLines(
             [
-                "@"+str(index+5),
-                "A=M",
+                "@"+self._outBaseName.replace(".asm","."+str(index)),
                 "D=M",
                 "@SP",
                 "A=M",
@@ -204,15 +224,28 @@ class CodeWriter:
             ]
         )
     
-    # addr = 5+index,  SP--, *addr=*SP
+    # addr = 5+index, *SP=addr, SP++
+    def _pushTemp(self,index):
+        return self._writeLines(
+            [
+                "@"+str(index+5),
+                "D=M",
+                "@SP",
+                "A=M",
+                "M=D",
+                "@SP",
+                "M=M+1"
+            ]
+        )
+    
+    # addr = 5+index,  SP--, addr=*SP
     def _popTemp(self,index):
-        return "\n".join(
+        return self._writeLines(
             [
                 "@SP",
                 "AM=M-1",
                 "D=M",
                 "@"+str(index+5),
-                "A=M",
                 "M=D"
             ]
         )
@@ -221,14 +254,14 @@ class CodeWriter:
     # *SP = THIS/THAT, SP++
     def _pushPointer(self,index):
         segment="THIS" if index == 0 else "THAT"
-        return "\n".join(
+        return self._writeLines(
             [
                 "@"+segment,
-                "D=A",
+                "D=M",
                 "@SP",
                 "A=M",
                 "M=D",
-                "@SP"
+                "@SP",
                 "M=M+1"
             ]
         )
@@ -237,7 +270,7 @@ class CodeWriter:
     # SP--, THIS/THAT = *SP
     def _popPointer(self,index):
         segment="THIS" if index == 0 else "THAT"
-        return "\n".join(
+        return self._writeLines(
             [
                 "@SP",
                 "AM=M-1",
@@ -246,6 +279,14 @@ class CodeWriter:
                 "M=D"
             ]
         )
+    
+    def _writeLines(self,lines:list,indent=4):
+        indentation=" "*indent
+        return "\n".join(map(lambda line:indentation+line,lines))+"\n"
+    
+    def end(self):
+        self._outFile.write(self._writeLines(["(END)"],0)+self._writeLines(["@END","0;JMP"]))
+        self.close()
 
     # Closes the output file
     def close(self):

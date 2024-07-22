@@ -26,7 +26,7 @@ def main():
         else:
             # Write arithmetic operations   
             writer.writeArithmetic(arg1)
-    writer.close()
+    writer.end()
 
 if __name__ == "__main__":
     main()
