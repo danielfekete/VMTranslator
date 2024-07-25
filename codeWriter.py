@@ -140,6 +140,34 @@ class CodeWriter:
                 else:
                     code+=self._popPointer(index)
         self._outFile.write(code)
+    
+    # Writes assembly code that effects the label command
+    def writeLabel(self,label:str):
+        self._writeLines([
+            "("+label+")"
+        ],0)
+    
+    # Writes assembly code that effects the goto command
+    def writeGoto(self,label:str):
+        self._writeLines([
+            "@"+label,
+            "0;JMP"
+        ])
+        return
+
+    # Writes assembly code that effects the if-goto command
+    def writeIf(self,label:str):
+        self._writeLines([
+            "@SP",
+            "A=M-1",
+            "D=M",
+            "@"+label,
+            "D;JNE"
+        ])
+        return
+
+
+    
     # Push local | argument | this | that i
     # addr = segmentPointer+index, *SP=*addr, SP++
     def _pushLatt(self,segment,index):
