@@ -48,14 +48,21 @@ def parseAndWriteCommands(writer:codeWriter.CodeWriter,src:str):
             parser.advance()
             commandType = parser.commandType()
             arg1=parser.arg1()
-            
-            if  commandType in ["C_PUSH","C_POP"]:
-                # Write push or pop operations
-                arg2=parser.arg2()
-                writer.writePushPop(commandType,arg1,arg2)
-            else:
-                # Write arithmetic operations   
-                writer.writeArithmetic(arg1)
+
+            # Handle command types
+            match commandType:
+                case "C_PUSH" | "C_POP":
+                    arg2=parser.arg2()
+                    writer.writePushPop(commandType,arg1,arg2)
+                case "C_LABEL":
+                    writer.writeLabel(arg1)
+                case "C_GOTO":
+                    writer.writeGoto(arg1)
+                case "C_IF":
+                    writer.writeIf(arg1)
+                case _:
+                    # Write arithmetic operations   
+                    writer.writeArithmetic(arg1)
 
 if __name__ == "__main__":
     Main.main()

@@ -143,27 +143,29 @@ class CodeWriter:
     
     # Writes assembly code that effects the label command
     def writeLabel(self,label:str):
-        self._writeLines([
+        self._outFile.write(self._writeLines([
             "("+label+")"
-        ],0)
+        ],0))
     
     # Writes assembly code that effects the goto command
     def writeGoto(self,label:str):
-        self._writeLines([
+        self._outFile.write(self._writeLines([
+            "// goto "+label,
             "@"+label,
             "0;JMP"
-        ])
+        ]))
         return
 
     # Writes assembly code that effects the if-goto command
     def writeIf(self,label:str):
-        self._writeLines([
+        self._outFile.write(self._writeLines([
+            "// if-goto "+label,
             "@SP",
-            "A=M-1",
+            "AM=M-1",
             "D=M",
             "@"+label,
             "D;JNE"
-        ])
+        ]))
         return
 
 
