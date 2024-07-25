@@ -60,6 +60,14 @@ def parseAndWriteCommands(writer:codeWriter.CodeWriter,src:str):
                     writer.writeGoto(arg1)
                 case "C_IF":
                     writer.writeIf(arg1)
+                case "C_FUNCTION":
+                    arg2=parser.arg2()
+                    writer.writeFunction(arg1,arg2)
+                case "C_CALL":
+                    arg2=parser.arg2()
+                    writer.writeCall(arg1,arg2)
+                case "C_RETURN":
+                    writer.writeReturn()
                 case _:
                     # Write arithmetic operations   
                     writer.writeArithmetic(arg1)

@@ -154,7 +154,6 @@ class CodeWriter:
             "@"+label,
             "0;JMP"
         ]))
-        return
 
     # Writes assembly code that effects the if-goto command
     def writeIf(self,label:str):
@@ -166,9 +165,66 @@ class CodeWriter:
             "@"+label,
             "D;JNE"
         ]))
+
+
+    # Writes assembly code that effects the function command
+    def writeFunction(self,functionName:str,nVars:int):
+        code=self._writeLines([
+            "("+functionName+")"
+        ],0)
+        # push constant 0 n times
+        for i in range(nVars):
+            code+=self._writeLines([
+                "// push constant 0",
+                "@0",
+                "D=A",
+                "@SP",
+                "A=M",
+                "M=D",
+                "@SP",
+                "M=M+1"
+            ])
+        self._outFile.write(code)
+    
+    # Writes assembly code that effects the call command
+    def writeCall(self,functionName:str,nVars:int):
         return
+    
+    # Writes assembly code that effects the return command
+    def writeReturn(self):
+        # Sets the return value and resets the stack pointer
+        # *ARG=*(SP-1), SP=ARG+1
+        code=self._writeLines([
+            "// return",
+            "@SP",
+            "AM=M-1",
+            "D=M",
+            "@ARG",
+            "A=M",
+            "M=D",
+            "@ARG",
+            "D=M+1",
+            "@SP",
+            "M=D"
+        ])
 
+        # Reset segment pointers
+        segmentPointers=["THAT","THIS","ARG","LCL"]
+        for i in range(4):
+            segmentPointer=segmentPointers[i]
+            code+=self._writeLines([
+                "// Set "+segmentPointer,
+                "@"+str(i+1),
+                "D=A",
+                "@LCL",
+                "A=M-D",
+                "D=M",
+                "@"+segmentPointer,
+                "M=D"
+            ])
 
+        
+        self._outFile.write(code)
     
     # Push local | argument | this | that i
     # addr = segmentPointer+index, *SP=*addr, SP++

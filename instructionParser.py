@@ -44,7 +44,12 @@ class InstructionParser:
 
     # Returns the first argument of the current command        
     def arg1(self)->str:
-        return self._currentInstruction if self.commandType() == "C_ARITHMETIC" else self._currentInstruction.split()[1]
+        if self.commandType() == "C_ARITHMETIC":
+            return self._currentInstruction
+        split=self._currentInstruction.split()
+        if len(split) > 1:
+            return split[1]
+        return ""
     
     # Returns the second argument of the current command        
     def arg2(self)->int:
