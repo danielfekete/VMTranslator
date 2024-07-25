@@ -315,7 +315,7 @@ class CodeWriter:
         return "\n".join(map(lambda line:indentation+line,lines))+"\n"
     
     def end(self):
-        self._outFile.write(self._writeLines(["(END)"],0)+self._writeLines(["@END","0;JMP"]))
+        # self._outFile.write(self._writeLines(["(END)"],0)+self._writeLines(["@END","0;JMP"]))
         self.close()
 
     # Closes the output file

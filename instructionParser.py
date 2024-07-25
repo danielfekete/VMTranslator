@@ -13,8 +13,10 @@ class InstructionParser:
             line=self._inputFile.readline()
             # When instruction is valid (not empty line or a comment) set the current instruction and return
             if re.match(r"^[\s]*$|^[\s]*\/\/.*$",line) == None:
+                # Remove white spaces and comments from the line
+                line =re.sub(r"[\s]*\/\/.*","",line).strip()
                 # Set the new instruction
-                self._currentInstruction=line.strip()
+                self._currentInstruction=line
                 return
             # return if the src file doesn't have more lines 
             elif self.hasMoreLines() == False:
