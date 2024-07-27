@@ -3,13 +3,30 @@ class CodeWriter:
         # Opens the output file
         self._outBaseName=outName.split("/")[-1]
         self._arithmeticCount=1
+        self._returnIndex=0
         self._outFile=open(outName,"a")
+        self._segmentPointers=["LCL","ARG","THIS","THAT"]
         self._segmentMap={
-            "local":"LCL",
-            "argument":"ARG",
-            "this":"THIS",
-            "that":"THAT"
+            "local":self._segmentPointers[0],
+            "argument":self._segmentPointers[1],
+            "this":self._segmentPointers[2],
+            "that":self._segmentPointers[3]
         }
+
+
+    # Writes assembly bootstrap code
+    def writeBootstrap(self):
+        # SP = 256
+        self._outFile.write(self._writeLines([
+            "// SP = 256",
+            "@256",
+            "D=A",
+            "@SP",
+            "M=D"
+        ]))
+
+        # Call sys init
+        self.writeCall("Sys.init",0)
 
     # Writes to the output file the assembly code, that implements the given arithmetic command
     def writeArithmetic(self,command):
@@ -169,33 +186,96 @@ class CodeWriter:
 
     # Writes assembly code that effects the function command
     def writeFunction(self,functionName:str,nVars:int):
-        code=self._writeLines([
+        self._outFile.write(self._writeLines([
             "("+functionName+")"
-        ],0)
+        ],0))
         # push constant 0 n times
         for i in range(nVars):
+            self.writePushPop("C_PUSH","constant",0)
+        
+    
+    # Writes assembly code that effects the call command
+    def writeCall(self,functionName:str,nVars:int):
+        
+        # generate return address label
+        returnLabel = functionName+"$ret."+str(self._returnIndex)
+        self._returnIndex+=1
+        
+        # push returnAddress
+        code=self._writeLines([
+            "// call "+functionName+" "+str(nVars),
+            "@"+returnLabel,
+            "D=A",
+            "@SP",
+            "A=M",
+            "M=D",
+            "@SP",
+            "M=M+1"
+        ])
+
+
+        # Save the caller states in the stack
+        # push LCL, ARG, THIS, THAT
+        for segmentPointer in self._segmentPointers:
             code+=self._writeLines([
-                "// push constant 0",
-                "@0",
-                "D=A",
+                "@"+segmentPointer,
+                "D=M",
                 "@SP",
                 "A=M",
                 "M=D",
                 "@SP",
                 "M=M+1"
             ])
+
+        # Reposition ARG
+        # ARG = SP-5-nArgs
+        code+=self._writeLines([
+            "@SP",
+            "D=M",
+            "@5",
+            "D=D-A",
+            "@"+str(nVars),
+            "D=D-A",
+            "@ARG",
+            "M=D"
+        ])
+
+        # LCL = SP
+        code+=self._writeLines([
+            "@SP",
+            "D=M",
+            "@LCL",
+            "M=D"
+        ])
         self._outFile.write(code)
-    
-    # Writes assembly code that effects the call command
-    def writeCall(self,functionName:str,nVars:int):
-        return
+
+        # goto fnName
+        self.writeGoto(functionName)
+
+        # write return address label
+        self._outFile.write(self._writeLines([
+            "("+returnLabel+")"
+        ],0))
     
     # Writes assembly code that effects the return command
     def writeReturn(self):
-        # Sets the return value and resets the stack pointer
-        # *ARG=*(SP-1), SP=ARG+1
+
+        # Save return address
         code=self._writeLines([
             "// return",
+            "@LCL",
+            "D=M",
+            "@5",
+            "D=D-A",
+            "A=D",
+            "D=M",
+            "@retAddr",
+            "M=D"
+        ])   
+
+        # Sets the return value and resets the stack pointer
+        # *ARG=*(SP-1), SP=ARG+1
+        code+=self._writeLines([
             "@SP",
             "AM=M-1",
             "D=M",
@@ -209,9 +289,9 @@ class CodeWriter:
         ])
 
         # Reset segment pointers
-        segmentPointers=["THAT","THIS","ARG","LCL"]
+        segmentPointersRev = self._segmentPointers[::-1]
         for i in range(4):
-            segmentPointer=segmentPointers[i]
+            segmentPointer=segmentPointersRev[i]
             code+=self._writeLines([
                 "// Set "+segmentPointer,
                 "@"+str(i+1),
@@ -223,13 +303,20 @@ class CodeWriter:
                 "M=D"
             ])
 
-        
+        code+=self._writeLines([
+            "@retAddr",
+            "A=M",
+            "0;JMP"
+        ])
         self._outFile.write(code)
     
+    def setFileName(self,filename:str):
+        # self._returnIndex=0
+        pass
+
     # Push local | argument | this | that i
     # addr = segmentPointer+index, *SP=*addr, SP++
     def _pushLatt(self,segment,index):
-        
         return self._writeLines(
                     [
                        "@"+str(index),

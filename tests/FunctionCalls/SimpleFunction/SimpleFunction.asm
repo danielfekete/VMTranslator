@@ -93,6 +93,14 @@
     @SP
     M=M+1
     // return
+    @LCL
+    D=M
+    @5
+    D=D-A
+    A=D
+    D=M
+    @retAddr
+    M=D
     @SP
     AM=M-1
     D=M
@@ -135,3 +143,6 @@
     D=M
     @LCL
     M=D
+    @retAddr
+    A=M
+    0;JMP

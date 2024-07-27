@@ -18,7 +18,9 @@ class Main:
         isDir = os.path.isdir(src)
 
         # Create the otuput vm file name
-        outName = src.replace(".vm",".asm") if not isDir else src.split('/')[-1]+".asm"
+        outName = src.replace(".vm",".asm") if not isDir else os.path.join(src,src.split('/')[-1]+".asm")
+
+        
 
         # Check if the output file is already exists
         if os.path.exists(outName):
@@ -32,13 +34,15 @@ class Main:
         if not isDir:
             parseAndWriteCommands(writer,src)
         else:
+            # Bootstrap the os
+            writer.writeBootstrap()
             # Loop through the .vm files
             directory = os.fsencode(src)
             for file in os.listdir(directory):
                 filename = os.fsdecode(file)
                 if filename.endswith(".vm"):
-                    print("filename"+filename)
-                    # self._parseAndWriteCommands(writer,filename)
+                    writer.setFileName(filename)
+                    parseAndWriteCommands(writer,os.path.join(src,filename))
         writer.end()
 
 
