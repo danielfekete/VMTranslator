@@ -17,6 +17,8 @@ class Main:
         # Check if the source path is a directory
         isDir = os.path.isdir(src)
 
+        baseName=os.path.basename(src)
+
         # Create the otuput vm file name
         outName = src.replace(".vm",".asm") if not isDir else os.path.join(src,src.split('/')[-1]+".asm")
 
@@ -32,6 +34,7 @@ class Main:
 
         # Parse the source file(s) and write the .asm commands
         if not isDir:
+            writer.setFileName(baseName)
             parseAndWriteCommands(writer,src)
         else:
             # Bootstrap the os

@@ -4,6 +4,7 @@ class CodeWriter:
         self._outBaseName=outName.split("/")[-1]
         self._arithmeticCount=1
         self._returnIndex=0
+        self._inFileName=""
         self._outFile=open(outName,"a")
         self._segmentPointers=["LCL","ARG","THIS","THAT"]
         self._segmentMap={
@@ -311,7 +312,7 @@ class CodeWriter:
         self._outFile.write(code)
     
     def setFileName(self,filename:str):
-        # self._returnIndex=0
+        self._inFileName=filename
         pass
 
     # Push local | argument | this | that i
@@ -376,7 +377,7 @@ class CodeWriter:
                 "@SP",
                 "AM=M-1",
                 "D=M",
-                "@"+self._outBaseName.replace(".asm","."+str(index)),
+                "@"+self._inFileName.replace(".vm","."+str(index)),
                 "M=D"
             ]
         )
@@ -387,7 +388,7 @@ class CodeWriter:
     def _pushStatic(self,index):
         return self._writeLines(
             [
-                "@"+self._outBaseName.replace(".asm","."+str(index)),
+                "@"+self._inFileName.replace(".vm","."+str(index)),
                 "D=M",
                 "@SP",
                 "A=M",
